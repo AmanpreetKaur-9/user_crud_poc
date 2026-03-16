@@ -2,6 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+
+// Silence dotenvx warnings and tips in test environment
+if (process.env.NODE_ENV === 'test') {
+    process.env.DOTENVX_LOG_LEVEL = 'none';
+}
 require('dotenv').config();
 
 const userRoutes = require('./routes/userRoutes');
@@ -12,7 +17,10 @@ const app = express();
 // Middleware
 app.use(helmet()); // Security headers
 app.use(cors()); // CORS support
-app.use(morgan('dev')); // Logger
+// Disable Morgan request logging during test runs
+if (process.env.NODE_ENV !== 'test') {
+    app.use(morgan('dev')); // Logger
+}
 app.use(express.json()); // Body parser
 
 // Routes
@@ -28,6 +36,10 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}
+
+module.exports = app;

@@ -2,3 +2,8 @@ node_modules
 .env
 .DS_Store
 *.log
+
+# Test outputs and reports
+integration-tests/reports/
+jest*.txt
+package-lock.json

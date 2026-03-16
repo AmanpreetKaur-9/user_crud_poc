@@ -1,0 +1,52 @@
+services:
+  integration_test_mysql:
+    image: mysql:8.0
+    container_name: integration_test_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test_db_template
+    ports:
+      - "33066:3306"
+    tmpfs:
+      # Keep MySQL data in memory for extreme speed; we don't need durability for tests
+      - /var/lib/mysql
+    command: >
+      --skip-name-resolve
+      --default-authentication-plugin=mysql_native_password
+      --innodb_flush_log_at_trx_commit=2
+      --sync_binlog=0
+      --innodb_buffer_pool_size=512M
+      --max_connections=500
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - testing_net
+
+  api:
+    image: node:20-alpine
+    container_name: integration_test_api
+    working_dir: /usr/src/app
+    volumes:
+      - ../../:/usr/src/app
+    command: npm run dev
+    environment:
+      - DB_HOST=integration_test_mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=test_db_template
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      integration_test_mysql:
+        condition: service_healthy
+    networks:
+      - testing_net
+
+networks:
+  testing_net:
+    driver: bridge
