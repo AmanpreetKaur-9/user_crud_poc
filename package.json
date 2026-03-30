@@ -8,21 +8,21 @@
     "dev": "nodemon src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:integration": "jest --config integration-tests/jest.config.js",
-    "test:integration:get-user": "bash integration-tests/scripts/run-integration-tests.sh integration-tests/tests/users/getUser.test.ts",
-    "test:integration:all": "bash integration-tests/scripts/run-integration-tests.sh integration-tests/tests/users/"
+    "test:integration:get-user": "node integration-tests/scripts/run-integration-tests.js integration-tests/tests/users/getUser.test.ts",
+    "test:integration:all": "node integration-tests/scripts/run-integration-tests.js integration-tests/tests/users/"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dnangla/user-crud-api.git"
+    "url": "git+https://github.com/AmanpreetKaur-9/user_crud_poc.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/dnangla/user-crud-api/issues"
+    "url": "https://github.com/AmanpreetKaur-9/user_crud_poc/issues"
   },
-  "homepage": "https://github.com/dnangla/user-crud-api#readme",
+  "homepage": "https://github.com/AmanpreetKaur-9/user_crud_poc#readme",
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",

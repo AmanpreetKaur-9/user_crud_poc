@@ -20,15 +20,16 @@ This project implements a backend service for User management with full CRUD ope
 
 ## Prerequisites
 
-- __Node.js__ (v14 or higher)
-- __MySQL__ (v8.0) installed and running
+- **Node.js** (v14 or higher)
+- **MySQL** (v8.0) installed and running
+- **Docker** and **Docker Compose** (Required for isolated integration tests)
 
 ## Installation
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd user-crud-api
+   git clone https://github.com/AmanpreetKaur-9/user_crud_poc.git
+   cd user_crud_poc
    ```
 
 2. Install dependencies:
@@ -53,7 +54,9 @@ This project implements a backend service for User management with full CRUD ope
    NODE_ENV=development
    ```
 
-## Database Setup
+## Database Setup (For Local Development)
+
+> **Note:** If you are only looking to run the automated **Integration Tests**, you can safely skip this step! The testing framework spins up Docker and provisions its own isolated databases automatically.
 
 1. Log in to your MySQL server:
    ```bash
@@ -119,10 +122,36 @@ The API uses a centralized error handling mechanism.
 - **409 Conflict**: Duplicate email address.
 - **500 Internal Server Error**: Unexpected server errors.
 
+## Integration Testing
+
+The project includes an automated, isolated integration testing framework that uses Docker to spin up a fresh database. This allows tests to run without interfering with your local development database. Tests run safely in parallel with full isolation (each test file gets its own dynamically cloned database).
+
+### Running Tests
+
+To run all integration tests automatically:
+```bash
+npm run test:integration:all
+```
+
+To run a specific test file (e.g., the Get User API test):
+```bash
+npm run test:integration:get-user
+```
+
+**Testing Pipeline Lifecycle (How Parallel Isolation Works):**
+1. **Container Start**: `run-integration-tests.js` starts a dedicated MySQL container via Docker Compose.
+2. **Dynamic Provisioning**: Jest spawns tests in parallel (up to 4 workers). Inside `BaseTestCase.ts`'s setup, each test file connects to MySQL and creates a uniquely named database block (e.g., `test_db_<uuid>`).
+3. **Migrations**: The file-specific worker runs the `sql/setup.sql` migration script directly on the newly created isolated database.
+4. **App Initialization**: The Express app is started on an ephemeral, randomly available system port (`PORT=0`) to avoid port collisions between parallel runners.
+5. **Execution**: Tests run directly against this completely isolated database and API instance.
+6. **Self-Cleanup**: After the file completes, `BaseTestCase.ts` drops its unique database and closes the app server.
+7. **Infrastructure Teardown**: Finally, the Node script tears down the main Docker container.
+
 ## Folder Structure
 
 ```
-user-crud-api/
+user_crud_poc/
+├── integration-tests/  # Dockerized integration testing framework
 ├── node_modules/
 ├── sql/
 │   └── setup.sql       # Database creation script
