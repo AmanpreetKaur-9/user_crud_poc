@@ -26,10 +26,10 @@ export class BaseTestCase {
         process.env.QUEUE_DRIVER = 'sync';
 
         // Set test env variables explicitly for MySQL connection
-        process.env.DB_HOST = '127.0.0.1';
-        process.env.DB_PORT = '33066';
-        process.env.DB_USER = 'root';
-        process.env.DB_PASSWORD = 'root';
+        process.env.DB_HOST = process.env.TEST_DB_HOST || '127.0.0.1';
+        process.env.DB_PORT = process.env.TEST_DB_PORT || '33066';
+        process.env.DB_USER = process.env.TEST_DB_USER || 'root';
+        process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD || 'root';
 
         // 5. Build and Start Server
         // Require app here dynamically so that it picks up the newly injected process.env.DB_NAME

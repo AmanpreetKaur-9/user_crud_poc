@@ -77,7 +77,7 @@ try {
     const args = process.argv.slice(2).join(' ');
     let testResult = 0;
     try {
-        runCommand(`npx jest --config=integration-tests/jest.config.js ${args}`);
+        runCommand(`NODE_ENV=test npx jest --config=integration-tests/jest.config.js ${args}`);
         console.log("✅ Tests passed.");
     } catch (e) {
         testResult = 1;

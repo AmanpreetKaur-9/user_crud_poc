@@ -1,3 +1,9 @@
+const now = new Date();
+const pad = (n) => n.toString().padStart(2, '0');
+const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+const timeStr = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+const timestamp = `${dateStr}_${timeStr}`;
+
 module.exports = {
     rootDir: '../',
     testMatch: ['<rootDir>/integration-tests/tests/**/*.test.ts'],
@@ -8,15 +14,16 @@ module.exports = {
     reporters: [
         'default',
         [
-            'jest-junit',
+            'jest-html-reporters',
             {
-                outputDirectory: 'integration-tests/reports',
-                outputName: 'junit.xml',
+                publicPath: `integration-tests/reports/${dateStr}`,
+                filename: `report_${timestamp}.html`,
+                expand: true,
+                pageTitle: 'Integration Test Report',
+                includeConsoleLog: true,
+                inlineSource: true,
             },
         ],
     ],
-    // Coverage configurations
-    collectCoverage: true,
-    coverageDirectory: 'integration-tests/reports/coverage',
-    coverageReporters: ['html', 'text-summary'],
+    collectCoverage: false,
 };

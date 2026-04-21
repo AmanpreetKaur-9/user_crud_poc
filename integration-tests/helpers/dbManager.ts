@@ -4,12 +4,14 @@ import fs from 'fs';
 import path from 'path';
 
 export class DBManager {
-    private static baseConfig = {
-        host: '127.0.0.1',
-        port: 33066,
-        user: 'root',
-        password: 'root'
-    };
+    private static get baseConfig() {
+        return {
+            host: process.env.TEST_DB_HOST || '127.0.0.1',
+            port: parseInt(process.env.TEST_DB_PORT || '33066', 10),
+            user: process.env.TEST_DB_USER || 'root',
+            password: process.env.TEST_DB_PASSWORD || 'root'
+        };
+    }
 
     /**
      * Clones the template DB into a highly isolated DB for the current test file.

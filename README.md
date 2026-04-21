@@ -128,15 +128,27 @@ The project includes an automated, isolated integration testing framework that u
 
 ### Running Tests
 
-To run all integration tests automatically:
-```bash
-npm run test:integration:all
-```
+You can run your testing suite using raw shell scripts or their equivalent predefined `npm` scripts in `package.json`.
 
-To run a specific test file (e.g., the Get User API test):
-```bash
-npm run test:integration:get-user
-```
+**1. All tests, 2 workers (safe default)**
+- **Shell:** `./run.sh integration-tests/tests/`
+- **NPM:** `npm run test:integration:all`
+
+**2. Specific folder**
+- **Shell:** `./run.sh integration-tests/tests/users/`
+- **NPM:** `npm run test:integration:users`
+
+**3. Single file**
+- **Shell:** `./run.sh integration-tests/tests/users/getUser.test.ts`
+- **NPM:** `npm run test:integration:get-user`
+
+**4. Custom parallelism (2–20, depends on machine RAM)**
+- **Shell:** `./run.sh --parallel 5 integration-tests/tests/`
+- **NPM:** `npm run test:integration:parallel`
+
+### Test Reports
+After tests are completed, an execution report is automatically generated as an HTML file inside a daily folder in `integration-tests/reports`.
+- **HTML Report:** `integration-tests/reports/YYYY-MM-DD/report_YYYY-MM-DD_HH-MM-SS.html`
 
 **Testing Pipeline Lifecycle (How Parallel Isolation Works):**
 1. **Container Start**: `run-integration-tests.js` starts a dedicated MySQL container via Docker Compose.
