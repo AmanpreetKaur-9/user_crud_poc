@@ -9,19 +9,15 @@ module.exports = {
     testMatch: ['<rootDir>/integration-tests/tests/**/*.test.ts'],
     preset: 'ts-jest',
     testEnvironment: 'node',
-    maxWorkers: 4, // Control parallelism manually based on CI resources
     setupFilesAfterEnv: ['<rootDir>/integration-tests/helpers/setupTests.ts'],
     reporters: [
         'default',
         [
-            'jest-html-reporters',
+            '<rootDir>/integration-tests/reporters/custom-html-reporter.js',
             {
                 publicPath: `integration-tests/reports/${dateStr}`,
                 filename: `report_${timestamp}.html`,
-                expand: true,
                 pageTitle: 'Integration Test Report',
-                includeConsoleLog: true,
-                inlineSource: true,
             },
         ],
     ],

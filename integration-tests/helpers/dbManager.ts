@@ -19,9 +19,11 @@ export class DBManager {
      */
     static async provisionIsolatedDatabase(): Promise<string> {
         const cloneName = `test_db_${crypto.randomUUID().replace(/-/g, '')}`;
-        process.stdout.write(`\n======================================================\n`);
-        process.stdout.write(`[DBManager] 🗄️  Creating isolated database clone: ${cloneName}\n`);
-        process.stdout.write(`======================================================\n\n`);
+        if (process.env.DEBUG === 'true') {
+            process.stdout.write(`\n======================================================\n`);
+            process.stdout.write(`[DBManager] 🗄️  Creating isolated database clone: ${cloneName}\n`);
+            process.stdout.write(`======================================================\n\n`);
+        }
         let retries = 2;
 
         while (retries >= 0) {
@@ -60,7 +62,9 @@ export class DBManager {
     }
 
     static async dropIsolatedDatabase(dbName: string): Promise<void> {
-        process.stdout.write(`\n[DBManager] 🗑️  Dropping isolated database: ${dbName}\n\n`);
+        if (process.env.DEBUG === 'true') {
+            process.stdout.write(`\n[DBManager] 🗑️  Dropping isolated database: ${dbName}\n\n`);
+        }
         const connection = await createConnection(this.baseConfig);
         await connection.query(`DROP DATABASE IF EXISTS ${dbName}`);
         await connection.end();

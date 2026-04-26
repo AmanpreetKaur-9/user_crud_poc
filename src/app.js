@@ -4,10 +4,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 
 // Silence dotenvx warnings and tips in test environment
-if (process.env.NODE_ENV === 'test') {
-    process.env.DOTENVX_LOG_LEVEL = 'none';
-}
-require('dotenv').config();
+require('dotenv').config({
+    quiet: process.env.NODE_ENV === 'test'
+});
 
 const userRoutes = require('./routes/userRoutes');
 const errorHandler = require('./utils/errorHandler');
@@ -23,31 +22,42 @@ if (process.env.NODE_ENV !== 'test') {
 }
 app.use(express.json()); // Body parser
 
-// Automatically trace all incoming Test API Calls to the Jest Console
-// The jest-html-reporters plugin intercepts these contextual logs and attaches them to the generated HTML
+// Capture structured API call data for the custom HTML test report
 if (process.env.NODE_ENV === 'test') {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    const TRACE_DIR = path.join(os.tmpdir(), 'jest-api-traces');
+    if (!fs.existsSync(TRACE_DIR)) {
+        try { fs.mkdirSync(TRACE_DIR, { recursive: true }); } catch (e) { }
+    }
+
     app.use((req, res, next) => {
-        let trace = `➡️  [API CALL] ${req.method} ${req.url}\n`;
-        if (req.body && Object.keys(req.body).length > 0) {
-            trace += `📦 [PAYLOAD SENT]\n${JSON.stringify(req.body, null, 2)}\n`;
-        }
+        const callData = {
+            method: req.method,
+            url: req.url,
+            requestBody: (req.body && Object.keys(req.body).length > 0) ? req.body : null,
+        };
 
         const oldSend = res.send;
         res.send = function (data) {
-            trace += `⬅️  [API RESPONSE] Status: ${res.statusCode}\n`;
+            callData.responseStatus = res.statusCode;
             try {
-                trace += `📝 [BODY RECEIVED]\n${JSON.stringify(JSON.parse(data), null, 2)}\n`;
+                callData.responseBody = JSON.parse(data);
             } catch (e) {
-                trace += `📝 [BODY RECEIVED]\n${data}\n`;
+                callData.responseBody = data;
             }
 
-            // Print to standard isolated file console
-            console.log(trace);
-
-            // Dynamically inject trace payload directly onto the test method row's info block!
+            // Write structured trace to temp file
             try {
-                const { addMsg } = require('jest-html-reporters/helper');
-                addMsg({ message: trace }).catch(() => { });
+                const traceFile = path.join(TRACE_DIR, `trace_${Date.now()}_${Math.random().toString(36).slice(2)}.json`);
+                const currentTest = (global).__CURRENT_TEST_NAME || 'unknown';
+                const currentFile = (global).__CURRENT_TEST_FILE || 'unknown';
+                fs.writeFileSync(traceFile, JSON.stringify({
+                    testName: currentTest,
+                    testFile: currentFile,
+                    ...callData,
+                }));
             } catch (e) { }
 
             return oldSend.apply(res, arguments);

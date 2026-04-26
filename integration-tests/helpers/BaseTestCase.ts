@@ -44,11 +44,13 @@ export class BaseTestCase {
                     process.env.PORT = this.port.toString();
                 }
 
-                process.stdout.write(`\n================================\n`);
-                process.stdout.write(`[BaseTestCase] Test Isolation Info:\n`);
-                process.stdout.write(`Test Run DB Name: ${this.dbName}\n`);
-                process.stdout.write(`Test Run Port:    ${this.port}\n`);
-                process.stdout.write(`================================\n\n`);
+                if (process.env.DEBUG === 'true') {
+                    process.stdout.write(`\n================================\n`);
+                    process.stdout.write(`[BaseTestCase] Test Isolation Info:\n`);
+                    process.stdout.write(`Test Run DB Name: ${this.dbName}\n`);
+                    process.stdout.write(`Test Run Port:    ${this.port}\n`);
+                    process.stdout.write(`================================\n\n`);
+                }
 
                 resolve(true);
             });

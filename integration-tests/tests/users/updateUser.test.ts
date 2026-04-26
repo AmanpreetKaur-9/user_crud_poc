@@ -77,4 +77,95 @@ describe('PUT /api/users/:id', () => {
         // THEN: Verify the API Joi validation blocked the update and returned 400
         expect(response.status).toBe(400);
     });
+
+    // ─── Edge Cases ───
+
+    it('should return 400 if name is too short in update payload', async () => {
+        // GIVEN: Seed a valid user
+        const User = require('../../../src/models/userModel');
+        const payload = UserFactory.buildCreatePayload({ email: 'update-short-name@domain.com' });
+        const userId = await User.create(payload);
+
+        // WHEN: Update with a name shorter than 3 characters
+        const response = await request(testCase.app)
+            .put(`/api/users/${userId}`)
+            .send({ name: 'AB', email: 'valid@domain.com', age: 25 });
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 400 if age is missing in update payload', async () => {
+        // GIVEN: Seed a valid user
+        const User = require('../../../src/models/userModel');
+        const payload = UserFactory.buildCreatePayload({ email: 'update-no-age@domain.com' });
+        const userId = await User.create(payload);
+
+        // WHEN: Update without the age field
+        const response = await request(testCase.app)
+            .put(`/api/users/${userId}`)
+            .send({ name: 'Valid Name', email: 'valid@domain.com' });
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 400 if update body is empty', async () => {
+        // GIVEN: Seed a valid user
+        const User = require('../../../src/models/userModel');
+        const payload = UserFactory.buildCreatePayload({ email: 'update-empty@domain.com' });
+        const userId = await User.create(payload);
+
+        // WHEN: Send empty body
+        const response = await request(testCase.app)
+            .put(`/api/users/${userId}`)
+            .send({});
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 409 if updating email to one that already exists', async () => {
+        // GIVEN: Seed two users
+        const User = require('../../../src/models/userModel');
+        const user1Payload = UserFactory.buildCreatePayload({ email: 'existing@domain.com' });
+        await User.create(user1Payload);
+
+        const user2Payload = UserFactory.buildCreatePayload({ email: 'will-clash@domain.com' });
+        const user2Id = await User.create(user2Payload);
+
+        // WHEN: Update user2's email to match user1's email
+        const response = await request(testCase.app)
+            .put(`/api/users/${user2Id}`)
+            .send({ name: 'Clash User', email: 'existing@domain.com', age: 30 });
+
+        // THEN: Should return 409 for duplicate entry
+        expect(response.status).toBe(409);
+        expect(response.body).toHaveProperty('error', 'Duplicate entry');
+    });
+
+    it('should preserve original data when update fails validation', async () => {
+        // GIVEN: Seed a user with known data
+        const User = require('../../../src/models/userModel');
+        const originalPayload = UserFactory.buildCreatePayload({
+            name: 'Preserved Name',
+            email: 'preserve-check@domain.com',
+            age: 45,
+        });
+        const userId = await User.create(originalPayload);
+
+        // WHEN: Send invalid update (should fail)
+        await request(testCase.app)
+            .put(`/api/users/${userId}`)
+            .send({ name: 'AB', email: 'bad', age: 'not-a-number' });
+
+        // THEN: Verify original data is untouched in DB
+        const user = await User.findById(userId);
+        expect(user.name).toBe('Preserved Name');
+        expect(user.email).toBe('preserve-check@domain.com');
+        expect(user.age).toBe(45);
+    });
 });

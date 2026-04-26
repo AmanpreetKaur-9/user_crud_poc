@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
-# Default safe configuration
-WORKERS=2
+# Source the test environment file to get default worker count (if it exists)
+if [ -f "integration-tests/.env.test" ]; then
+    source integration-tests/.env.test
+fi
+
+# Default safe configuration (fallback to 2 if not in env)
+WORKERS=${TEST_WORKERS:-2}
 TARGET_PATH=""
 
 # Parse arguments from the command line

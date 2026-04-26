@@ -1,4 +1,10 @@
 const { execSync } = require('child_process');
+const path = require('path');
+
+// Suppress dotenv logging to clean up test output
+process.env.DOTENVX_LOG_LEVEL = 'none';
+// Load the dedicated integration test environment file
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.test') });
 
 const runCommand = (command, silent = false) => {
     try {
@@ -63,14 +69,19 @@ try {
 
     // 4. Create Template DB and Grant Permissions
     console.log("🛠️ Creating test template and running migrations...");
-    process.env.DB_PORT = '33066';
-    process.env.DB_HOST = '127.0.0.1';
-    process.env.DB_USER = 'root';
-    process.env.DB_PASS = 'root';
-    process.env.DB_NAME = 'test_db_template';
+    process.env.DB_PORT = process.env.TEST_DB_PORT || '33066';
+    process.env.DB_HOST = process.env.TEST_DB_HOST || '127.0.0.1';
+    process.env.DB_USER = process.env.TEST_DB_USER || 'root';
+    process.env.DB_PASS = process.env.TEST_DB_PASSWORD || 'root';
+    process.env.DB_NAME = process.env.TEST_DB_NAME || 'test_db_template';
 
-    const sql = `CREATE DATABASE IF NOT EXISTS test_db_template; GRANT ALL PRIVILEGES ON \\\`test_db_%\\\`.* TO 'root'@'%'; FLUSH PRIVILEGES;`;
-    runCommand(`docker exec integration_test_mysql mysql -h 127.0.0.1 -u root -proot -e "${sql}"`);
+    const dbUser = process.env.TEST_DB_USER || 'root';
+    const dbPass = process.env.TEST_DB_PASSWORD || 'root';
+    const dbName = process.env.TEST_DB_NAME || 'test_db_template';
+    const sql = `CREATE DATABASE IF NOT EXISTS ${dbName}; GRANT ALL PRIVILEGES ON \\\`test_db_%\\\`.* TO '${dbUser}'@'%'; FLUSH PRIVILEGES;`;
+
+    // Pass password safely via environment to suppress the "Using a password on the command line..." warning
+    runCommand(`docker exec -e MYSQL_PWD="${dbPass}" integration_test_mysql mysql -h 127.0.0.1 -u ${dbUser} -e "${sql}"`);
 
     // 5. Execute Tests configured to use the Worker Manager
     console.log("⚡ Running Jest Workers...");

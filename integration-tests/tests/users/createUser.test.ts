@@ -50,4 +50,90 @@ describe('POST /api/users', () => {
         // THEN
         expect(response.status).toBe(400); // 400 error due to validation failure
     });
+
+    // ─── Edge Cases ───
+
+    it('should return 400 if name is missing', async () => {
+        // GIVEN: Payload without name
+        const payload = { email: 'no-name@domain.com', age: 25 };
+
+        // WHEN
+        const response = await request(testCase.app)
+            .post('/api/users')
+            .send(payload);
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 400 if name is too short (less than 3 characters)', async () => {
+        // GIVEN: Name with only 2 characters
+        const payload = UserFactory.buildCreatePayload({ name: 'AB', email: 'short-name@domain.com' });
+
+        // WHEN
+        const response = await request(testCase.app)
+            .post('/api/users')
+            .send(payload);
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 400 if age is missing', async () => {
+        // GIVEN: Payload without age
+        const payload = { name: 'Test User', email: 'no-age@domain.com' };
+
+        // WHEN
+        const response = await request(testCase.app)
+            .post('/api/users')
+            .send(payload);
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 400 if age is not an integer', async () => {
+        // GIVEN: Age as a decimal
+        const payload = UserFactory.buildCreatePayload({ age: 25.5, email: 'decimal-age@domain.com' });
+
+        // WHEN
+        const response = await request(testCase.app)
+            .post('/api/users')
+            .send(payload);
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 400 if request body is empty', async () => {
+        // GIVEN: Empty body
+        // WHEN
+        const response = await request(testCase.app)
+            .post('/api/users')
+            .send({});
+
+        // THEN
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return 409 if email already exists (duplicate entry)', async () => {
+        // GIVEN: Create a user first
+        const payload = UserFactory.buildCreatePayload({ email: 'duplicate@domain.com' });
+        await request(testCase.app).post('/api/users').send(payload);
+
+        // WHEN: Try to create another user with the same email
+        const duplicatePayload = UserFactory.buildCreatePayload({ email: 'duplicate@domain.com' });
+        const response = await request(testCase.app)
+            .post('/api/users')
+            .send(duplicatePayload);
+
+        // THEN: Should return 409 for duplicate entry
+        expect(response.status).toBe(409);
+        expect(response.body).toHaveProperty('error', 'Duplicate entry');
+    });
 });

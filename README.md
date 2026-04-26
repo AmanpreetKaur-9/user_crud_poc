@@ -39,7 +39,9 @@ This project implements a backend service for User management with full CRUD ope
 
 ## Configuration
 
-1. Create a `.env` file in the root directory (or copy `.env.example` if available):
+### Application Environment
+
+1. Create a `.env` file in the root directory:
    ```bash
    cp .env.example .env
    ```
@@ -53,6 +55,27 @@ This project implements a backend service for User management with full CRUD ope
    DB_NAME=user_crud_db
    NODE_ENV=development
    ```
+
+### Integration Test Environment
+
+The integration tests use a **separate environment file** to keep test configuration isolated from the application.
+
+1. Create the test env file:
+   ```bash
+   cp integration-tests/.env.test.example integration-tests/.env.test
+   ```
+
+2. The default values work out-of-the-box with the Docker Compose setup:
+   ```env
+   NODE_ENV=test
+   TEST_DB_HOST=127.0.0.1
+   TEST_DB_PORT=33066
+   TEST_DB_USER=root
+   TEST_DB_PASSWORD=root
+   TEST_DB_NAME=test_db_template
+   ```
+
+> **Note:** Both `.env` and `integration-tests/.env.test` are git-ignored. Only the `.example` templates are committed to the repository.
 
 ## Database Setup (For Local Development)
 
@@ -126,6 +149,13 @@ The API uses a centralized error handling mechanism.
 
 The project includes an automated, isolated integration testing framework that uses Docker to spin up a fresh database. This allows tests to run without interfering with your local development database. Tests run safely in parallel with full isolation (each test file gets its own dynamically cloned database).
 
+### Setup
+
+Before running tests for the first time, ensure the test environment file exists:
+```bash
+cp integration-tests/.env.test.example integration-tests/.env.test
+```
+
 ### Running Tests
 
 You can run your testing suite using raw shell scripts or their equivalent predefined `npm` scripts in `package.json`.
@@ -147,41 +177,76 @@ You can run your testing suite using raw shell scripts or their equivalent prede
 - **NPM:** `npm run test:integration:parallel`
 
 ### Test Reports
-After tests are completed, an execution report is automatically generated as an HTML file inside a daily folder in `integration-tests/reports`.
-- **HTML Report:** `integration-tests/reports/YYYY-MM-DD/report_YYYY-MM-DD_HH-MM-SS.html`
+After tests are completed, an HTML execution report is automatically generated inside a daily folder in `integration-tests/reports/`.
+
+- **Report Path:** `integration-tests/reports/YYYY-MM-DD/report_YYYY-MM-DD_HH-MM-SS.html`
+- **Contents:** Summary cards (Total Tests, Passed, Failed, Pass Rate, Duration), filter buttons, expandable test file rows with individual test case details including HTTP request/response data.
+
+### Test Coverage
+
+| Test File | Test Cases | Scenarios Covered |
+| :--- | :--- | :--- |
+| `createUser.test.ts` | 8 | Success, invalid email, missing name, short name, missing age, non-integer age, empty body, duplicate email |
+| `getUser.test.ts` | 5 | List all, empty list, get by ID, 404 not found, response field verification |
+| `updateUser.test.ts` | 8 | Success, 404 not found, malformed payload, short name, missing age, empty body, duplicate email, data preservation on validation failure |
+| `deleteUser.test.ts` | 5 | Success, 404 not found, double-delete, isolation check, response body verification |
 
 **Testing Pipeline Lifecycle (How Parallel Isolation Works):**
-1. **Container Start**: `run-integration-tests.js` starts a dedicated MySQL container via Docker Compose.
-2. **Dynamic Provisioning**: Jest spawns tests in parallel (up to 4 workers). Inside `BaseTestCase.ts`'s setup, each test file connects to MySQL and creates a uniquely named database block (e.g., `test_db_<uuid>`).
-3. **Migrations**: The file-specific worker runs the `sql/setup.sql` migration script directly on the newly created isolated database.
-4. **App Initialization**: The Express app is started on an ephemeral, randomly available system port (`PORT=0`) to avoid port collisions between parallel runners.
-5. **Execution**: Tests run directly against this completely isolated database and API instance.
-6. **Self-Cleanup**: After the file completes, `BaseTestCase.ts` drops its unique database and closes the app server.
-7. **Infrastructure Teardown**: Finally, the Node script tears down the main Docker container.
+1. **Environment Load**: `run-integration-tests.js` loads `integration-tests/.env.test` for test-specific configuration.
+2. **Container Start**: A dedicated MySQL container is started via Docker Compose.
+3. **Dynamic Provisioning**: Jest spawns tests in parallel (up to 4 workers). Inside `BaseTestCase.ts`'s setup, each test file connects to MySQL and creates a uniquely named database block (e.g., `test_db_<uuid>`).
+4. **Migrations**: The file-specific worker runs the `sql/setup.sql` migration script directly on the newly created isolated database.
+5. **App Initialization**: The Express app is started on an ephemeral, randomly available system port (`PORT=0`) to avoid port collisions between parallel runners.
+6. **API Tracing**: All HTTP requests/responses are captured and written to trace files, which are later embedded in the HTML report.
+7. **Execution**: Tests run directly against this completely isolated database and API instance.
+8. **Self-Cleanup**: After the file completes, `BaseTestCase.ts` drops its unique database and closes the app server.
+9. **Report Generation**: A custom HTML reporter reads the API trace data and generates a styled execution report.
+10. **Infrastructure Teardown**: Finally, the Node script tears down the main Docker container.
 
 ## Folder Structure
 
 ```
 user_crud_poc/
-├── integration-tests/  # Dockerized integration testing framework
-├── node_modules/
+├── integration-tests/              # Dockerized integration testing framework
+│   ├── .env.test                   # Test environment variables (git-ignored)
+│   ├── .env.test.example           # Template for test env setup
+│   ├── docker/
+│   │   └── docker-compose.yml      # Test MySQL container config
+│   ├── factories/
+│   │   └── UserFactory.ts          # Test data factory
+│   ├── helpers/
+│   │   ├── BaseTestCase.ts         # Test isolation orchestrator
+│   │   ├── dbManager.ts            # Database provisioning/cleanup
+│   │   └── setupTests.ts           # Global test hooks
+│   ├── reporters/
+│   │   └── custom-html-reporter.js # Custom HTML report generator
+│   ├── reports/                    # Generated HTML reports (git-ignored)
+│   ├── scripts/
+│   │   └── run-integration-tests.js # Test pipeline orchestrator
+│   ├── tests/
+│   │   └── users/                  # User CRUD test files
+│   ├── workers/
+│   │   └── portAllocator.ts        # Ephemeral port allocation
+│   └── jest.config.js              # Jest configuration
 ├── sql/
-│   └── setup.sql       # Database creation script
+│   └── setup.sql                   # Database creation script
 ├── src/
 │   ├── config/
-│   │   └── db.js       # Database connection pool
+│   │   └── db.js                   # Database connection pool
 │   ├── controllers/
-│   │   └── userController.js # Request handling logic
+│   │   └── userController.js       # Request handling logic
 │   ├── models/
-│   │   └── userModel.js      # Data access layer
+│   │   └── userModel.js            # Data access layer
 │   ├── routes/
-│   │   └── userRoutes.js     # API route definitions
+│   │   └── userRoutes.js           # API route definitions
 │   ├── utils/
-│   │   ├── errorHandler.js   # Validation schemas
-│   │   └── validation.js     # Global error handler
-│   └── app.js          # App entry point
-├── .env                # Environment variables
+│   │   ├── errorHandler.js         # Global error handler
+│   │   └── validation.js           # Joi validation schemas
+│   └── app.js                      # App entry point
+├── .env                            # App environment variables (git-ignored)
+├── .env.example                    # Template for app env setup
 ├── .gitignore
 ├── package.json
+├── run.sh                          # Test runner shell script
 └── README.md
 ```
